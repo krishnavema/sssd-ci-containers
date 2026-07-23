@@ -21,6 +21,12 @@
 
 - name: Set distribution specific facts for RHEL 9 and 10
   set_fact:
-    passkey_support: true
     buildroot: true
   when: ansible_facts['distribution_major_version'] | int >= 9
+
+- name: Enable passkey support for RHEL 9 and 10 if not already set
+  set_fact:
+    passkey_support: true
+  when:
+    - ansible_facts['distribution_major_version'] | int >= 9
+    - passkey_support is not defined
