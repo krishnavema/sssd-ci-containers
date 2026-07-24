@@ -3,4 +3,4 @@
 
 - name: Set distribution specific facts
   set_fact:
-    passkey_support: Yes
+    passkey_support: "{{ passkey_support | default(true) | bool }}"

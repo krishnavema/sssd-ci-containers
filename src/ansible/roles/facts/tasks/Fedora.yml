@@ -7,7 +7,7 @@
         sshd: sshd.service
     buildroot: yes
     debuginfo: yes
-    passkey_support: Yes
+    passkey_support: "{{ passkey_support | default(true) | bool }}"
     ipa: '{{ freeipa_packages }}'
     ca_trust_dir: /etc/pki/ca-trust/source/anchors/
     ca_trust_update: update-ca-trust

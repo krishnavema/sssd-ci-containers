@@ -4,4 +4,4 @@
 - name: Set distribution specific facts
   set_fact:
     buildroot: Yes
-    passkey_support: Yes
+    passkey_support: "{{ passkey_support | default(true) | bool }}"
