@@ -1,0 +1,39 @@
+---
+# Relax pam_pwquality settings on STIG-hardened hosts so the test framework
+# can create local users with simple passwords (e.g. Secret123).
+# Run AFTER enable-stig.yaml in the CI prep phase.
+
+- hosts: "{{ host_pattern | default('client') }}"
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: Relax pwquality - allow simple test passwords
+    lineinfile:
+      path: /etc/security/pwquality.conf
+      regexp: "^\\s*{{ item.key }}\\s*="
+      line: "{{ item.key }} = {{ item.value }}"
+      state: present
+    loop:
+    - { key: "minlen", value: "1" }
+    - { key: "dcredit", value: "0" }
+    - { key: "ucredit", value: "0" }
+    - { key: "lcredit", value: "0" }
+    - { key: "ocredit", value: "0" }
+    - { key: "minclass", value: "0" }
+    - { key: "dictcheck", value: "0" }
+    - { key: "enforce_for_root", value: "" }
+
+  - name: Remove enforce_for_root from pwquality.conf
+    lineinfile:
+      path: /etc/security/pwquality.conf
+      regexp: "^\\s*enforce_for_root"
+      state: absent
+
+  - name: Remove pwquality overrides from pwquality.conf.d
+    shell: rm -f /etc/security/pwquality.conf.d/*
+    args:
+      warn: false
+
+  - name: Unlock faillock for all users
+    shell: faillock --reset
+    ignore_errors: yes
