@@ -1,12 +1,14 @@
 ---
-# Relax pam_pwquality settings on STIG-hardened hosts so the test framework
-# can create local users with simple passwords (e.g. Secret123).
+# Relax STIG hardening on test hosts so the CI test framework can operate.
+# STIG enforces strict password, SSH, and PAM policies that break pytest-mh.
 # Run AFTER enable-stig.yaml in the CI prep phase.
 
 - hosts: "{{ host_pattern | default('client') }}"
   become: yes
   gather_facts: no
   tasks:
+
+  # --- Password quality ---
   - name: Relax pwquality - allow simple test passwords
     lineinfile:
       path: /etc/security/pwquality.conf
@@ -39,6 +41,49 @@
       path: /etc/security/pwquality.conf.d
       state: directory
       mode: '0755'
+
+  # --- SSH hardening overrides ---
+  # STIG writes restrictive settings to 00-complianceascode-hardening.conf
+  # that break pytest-mh SSH connections.
+  - name: Enable PasswordAuthentication in complianceascode hardening conf
+    lineinfile:
+      path: /etc/ssh/sshd_config.d/00-complianceascode-hardening.conf
+      regexp: "^\\s*PasswordAuthentication"
+      line: "PasswordAuthentication yes"
+    ignore_errors: yes
+
+  - name: Raise ClientAliveCountMax for long-running test sessions
+    lineinfile:
+      path: /etc/ssh/sshd_config.d/00-complianceascode-hardening.conf
+      regexp: "^\\s*ClientAliveCountMax"
+      line: "ClientAliveCountMax 100"
+    ignore_errors: yes
+
+  - name: Raise ClientAliveInterval for test stability
+    lineinfile:
+      path: /etc/ssh/sshd_config.d/00-complianceascode-hardening.conf
+      regexp: "^\\s*ClientAliveInterval"
+      line: "ClientAliveInterval 1800"
+    ignore_errors: yes
+
+  - name: Enable PasswordAuthentication in sshd_config
+    lineinfile:
+      path: /etc/ssh/sshd_config
+      regexp: "^PasswordAuthentication"
+      line: "PasswordAuthentication yes"
+
+  - name: Restart sshd to apply SSH config changes
+    service:
+      name: sshd
+      state: restarted
+
+  # --- PAM faillock ---
+  - name: Disable faillock deny (prevent account lockout during tests)
+    lineinfile:
+      path: /etc/security/faillock.conf
+      regexp: "^\\s*deny\\s*="
+      line: "deny = 0"
+    ignore_errors: yes
 
   - name: Unlock faillock for all users
     shell: faillock --reset
