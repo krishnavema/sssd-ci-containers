@@ -30,9 +30,15 @@
       state: absent
 
   - name: Remove pwquality overrides from pwquality.conf.d
-    shell: rm -f /etc/security/pwquality.conf.d/*
-    args:
-      warn: false
+    file:
+      path: /etc/security/pwquality.conf.d
+      state: absent
+
+  - name: Recreate empty pwquality.conf.d directory
+    file:
+      path: /etc/security/pwquality.conf.d
+      state: directory
+      mode: '0755'
 
   - name: Unlock faillock for all users
     shell: faillock --reset
